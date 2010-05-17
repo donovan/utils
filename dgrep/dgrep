@@ -1,0 +1,155 @@
+#!/usr/bin/perl
+##############################################################################
+#
+# Script:   TODO_SCRIPT_NAME
+#
+# Author:   Donovan Jones <donovan@catalyst.net.nz>
+#
+# Description:
+#
+# TODO_DESCRIPTION
+#
+
+use strict;
+use warnings;
+
+use Pod::Usage;
+use Getopt::Long qw(GetOptions);
+use File::Find;
+use File::Basename;
+use File::Slurp;
+use Cwd;
+
+
+# prune paths via config file and via command line (-p --prune)
+# add config file support
+# add support for other forms of file id besides extension
+
+# type map, add support for building this structure from ini file
+# [types]
+# mason=html,mhtml,comp
+# perl=html,mhtml,comp,pm,t,pl
+# bash=sh
+# sql
+# js
+
+#populate this from ini file
+my @prune_paths = qw(
+    /home/don/tab/HEAD/.git/
+);
+
+my $cwd = cwd();
+
+#print "cwd = $cwd\n";
+#print STDERR (join("|",@ARGV),"\n");
+
+my(%opt);
+
+if(!GetOptions(\%opt, 'help|?', 'prune|p:s', 'type|t:s')) {
+    #pod2usage(-exitval => 1,  -verbose => 0);
+}
+
+pod2usage(-exitstatus => 0, -verbose => 1) if $opt{help};
+
+#print STDERR (join("|",@ARGV),"\n");
+
+my $types = {
+    mason => [qw(html mhtml comp)],
+    perl  => [qw(html mhtml comp pl pm t)],
+    bash  => [qw(sh)],
+    sql   => [qw(sql)],
+};
+
+my %seen;
+foreach my $t (keys %$types) {
+    foreach my $item (@{$types->{$t}}) {
+        push @{$types->{all}}, $item unless $seen{$item};
+        $seen{$item}++;
+    }
+}
+
+if ( $opt{prune} ) {
+    #print "got prune = $opt{prune}\n";
+    push @prune_paths, split/,/, $opt{prune};
+}
+
+$opt{type} //= 'mason';
+
+my @files_to_grep;
+
+find(\&process_file, $cwd);
+
+sub process_file {
+    my $file = $File::Find::name;
+    #print "skipping '$file'\n" if grep {$file =~ m{ $_ }xms} @prune_paths;
+    if (-f $file) {
+        my $suffix = (fileparse($file, qr/\.[^.]*/))[2];
+        #print "suffix = $suffix\n";
+        if (grep {".$_" eq $suffix} @{$types->{$opt{type}}}) {
+            $file =~ s{$cwd/}{}xms;
+            push @files_to_grep, $file;
+        }
+        #print "$file\n";
+    }
+    elsif (-d $file) {
+        #print "$file is a dir\n";
+    }
+}
+
+
+
+# do xargs stuff here
+#print "type files = \n";
+my $files;
+foreach my $file (sort @files_to_grep) {
+    $files .= "$file\n";
+    #print "$file\0";
+    #print "$file\n";
+}
+
+write_file('xargs-tmp-file', $files);
+
+my @commands = qw(
+    xargs
+    -a
+    xargs-tmp-file
+    grep
+);
+
+push(@commands, @ARGV);
+
+system(@commands);
+
+unlink 'xargs-tmp-file';
+
+exit 0;
+
+__END__
+
+=head1 NAME
+
+TODO_SCRIPT_NAME - TODO_SHORT_DESCRIPTION
+
+=head1 SYNOPSIS
+
+  TODO_SCRIPT_NAME [options] <files>
+
+  Options:
+
+   --help     detailed help message
+
+=head1 DESCRIPTION
+
+TODO_DESCRIPTION
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help>
+
+Display this documentation.
+
+=back
+
+=cut
