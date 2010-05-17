@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+while (<STDIN>) {
+    if (s{'}{"}gxms) {
+    }
+    elsif (s{"}{'}gxms) {
+    }
+    print;
+}

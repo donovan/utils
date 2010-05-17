@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my @words;
+while (<STDIN>) {
+    chomp;
+    push @words, split; # cant do regular split or we just get the last line
+}
+
+print join(' ', @words) . "\n";

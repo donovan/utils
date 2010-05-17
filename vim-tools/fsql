@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my @words;
+while (<STDIN>) {
+    chomp;
+    push @words, split; # cant do regular split or we just get the last line
+}
+
+my $in_parens = 0;
+
+foreach my $word (@words) {
+    if ($word =~ m{ \( }xms) {
+        $in_parens = 1;
+    }
+    elsif ($word =~ m{ \) }xms) {
+        $in_parens = 0;
+    }
+
+    if ($in_parens) {
+        print "$word ";
+    }
+    elsif ($word =~ m{(SELECT|INSERT|DELETE|UPDATE|BY)}xms) {
+        print "$word\n    ";
+    }
+    elsif ($word =~ m{(FROM|WHERE|LIMIT)}xms) {
+        print "\n$word\n    ";
+    }
+    elsif ($word =~ m{(GROUP|ORDER)}xms) {
+        print "\n$word ";
+    }
+    elsif ($word =~ m{(AND|INNER|LEFT|OUTER)}xms) {
+        print "\n    $word ";
+    }
+    elsif ($word =~ m{ , \z }xms) {
+        print "$word\n    ";
+    }
+    else {
+        print "$word ";
+    }
+}
+
+print "\n";
