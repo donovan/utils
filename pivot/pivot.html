@@ -1,0 +1,126 @@
+<%args>
+    $list_one => undef
+    $list_two => undef
+    $list_one_position => 1
+    $list_two_position => 2
+    $list_one_seperator => '\s+'
+    $list_two_seperator => '\s+'
+    $list_one_inline_seperator => '\s+'
+    $list_two_inline_seperator => '\s+'
+    $cleanup_one => 0
+    $cleanup_two => 0
+    $output_type => 'vim'
+</%args>
+<%init>
+
+    # add selectors of all the types
+    # add quoted hash and hash
+    # add sorting by column
+    # add prepender and appender to each col
+    # add removing a suffix/prefix on each col
+    # add regex substitution on each col
+
+    # add output types and output generator (eg for making sql or html tables or a wiki table)
+
+    my @output_types = qw( vim space-list hash mv cp );
+    my @seperators = ( '\s+', '\r', ',');
+    my @inline_seperators = ('\s+', ',');
+
+    my @list_one;
+    my @list_two;
+
+    foreach my $line_item ( split/$list_one_seperator/, $list_one ) {
+        $line_item =~ s{ \A $list_one_inline_seperator }{}xms;
+        my $item = (split/$list_one_inline_seperator/, $line_item)[$list_one_position - 1];
+        if ($cleanup_one) {
+            $item =~ s{ \W+ }{}gxms
+        }
+        push @list_one, $item;
+    }
+
+    foreach my $line_item ( split/$list_two_seperator/, $list_two ) {
+        $line_item =~ s{ \A $list_two_inline_seperator }{}xms;
+        my $item = (split/$list_two_inline_seperator/, $line_item)[$list_two_position - 1];
+        if ($cleanup_two) {
+            $item =~ s{ \W+ }{}gxms
+        }
+        push @list_two, $item;
+    }
+
+</%init>
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="icon" type="image/png" href="/files/fam-fam-fam/arrow_join.png">
+    </head>
+    <body>
+% if  ( $list_one and $list_two ) {
+%   my $count = 0;
+%   foreach my $item (@list_one) {
+%       if ($output_type eq 'hash') {
+%#        'RACI' => 'FOBracing.jpg ',
+'<% $item | h %>' =&gt; '<% $list_two[$count] | h %>',<br>
+%       } elsif ($output_type eq 'space-list') {
+        <% $item | h %><% $list_two[$count] | h %>&nbsp;
+%       } elsif ($output_type eq 'vim') {
+    %s/<% $item | h %>/<% $list_two[$count] | h %>/cg<br>
+%       } elsif ($output_type eq 'cp') {
+    cp <% $item | h %> <% $list_two[$count] | h %><br>
+%       } elsif ($output_type eq 'mv') {
+    mv <% $item | h %> <% $list_two[$count] | h %><br>
+%       }
+%       $count++;
+%   }
+% } else {
+Patercake patercake coder man make me a list as fast as you can:
+<form method="post" action="?">
+    <textarea name="list_one" rows="20" cols="200"></textarea><br>
+    List 1: column: 
+    <select name="list_one_position">
+% for my $num (1..9) {
+        <option value="<% $num | h %>"><% $num | h %></option>
+% }
+    </select>
+    seperator: 
+    <select name="list_one_seperator">
+% foreach my $type (@seperators) {
+        <option value="<% $type | h %>"><% $type | h %></option>
+% }
+    </select>
+    inline seperator: 
+    <select name="list_one_inline_seperator">
+% foreach my $type (@inline_seperators) {
+        <option value="<% $type | h %>"><% $type | h %></option>
+% }
+    </select>
+    <br>
+    <textarea name="list_two" rows="20" cols="200"></textarea><br>
+    List 2: column
+    <select name="list_two_position">
+% for my $num (1..9) {
+        <option value="<% $num | h %>"><% $num | h %></option>
+% }
+    </select>
+    seperator: 
+    <select name="list_two_seperator">
+% foreach my $type (@seperators) {
+        <option value="<% $type | h %>"><% $type | h %></option>
+% }
+    </select>
+    inline seperator: 
+    <select name="list_two_inline_seperator">
+% foreach my $type (@inline_seperators) {
+        <option value="<% $type | h %>"><% $type | h %></option>
+% }
+    </select>
+    <br>
+    <select name="output_type">
+% foreach my $type (@output_types) {
+        <option value="<% $type | h %>"><% $type | h %></option>
+% }
+    </select>
+    <button type="submit">Make list</button>
+</form>
+% }
+    </body>
+</html>
