@@ -20,7 +20,6 @@ use File::Basename;
 use File::Slurp;
 use Cwd;
 
-
 # prune paths via config file and via command line (-p --prune)
 # add config file support
 # add support for other forms of file id besides extension
@@ -35,7 +34,7 @@ use Cwd;
 
 #populate this from ini file
 my @prune_paths = qw(
-    /home/don/tab/HEAD/.git/
+    .git
 );
 
 my $cwd = cwd();
@@ -53,27 +52,23 @@ pod2usage(-exitstatus => 0, -verbose => 1) if $opt{help};
 
 #print STDERR (join("|",@ARGV),"\n");
 
-my $types = {
-    mason => [qw(html mhtml comp)],
-    perl  => [qw(html mhtml comp pl pm t)],
-    bash  => [qw(sh)],
-    sql   => [qw(sql)],
+my $ignore_prefixes = {
+    ignore => [qw( js sql cpp svg tex )],
 };
 
 my %seen;
-foreach my $t (keys %$types) {
-    foreach my $item (@{$types->{$t}}) {
-        push @{$types->{all}}, $item unless $seen{$item};
+foreach my $t (keys %$ignore_prefixes) {
+    foreach my $item (@{$ignore_prefixes->{$t}}) {
+        push @{$ignore_prefixes->{all}}, $item unless $seen{$item};
         $seen{$item}++;
     }
 }
 
 if ( $opt{prune} ) {
-    #print "got prune = $opt{prune}\n";
     push @prune_paths, split/,/, $opt{prune};
 }
 
-$opt{type} //= 'mason';
+$opt{type} //= 'ignore';
 
 my @files_to_grep;
 
@@ -81,11 +76,11 @@ find(\&process_file, $cwd);
 
 sub process_file {
     my $file = $File::Find::name;
-    #print "skipping '$file'\n" if grep {$file =~ m{ $_ }xms} @prune_paths;
+    return if grep {$file =~ m{ / $_ / }xms} @prune_paths;
     if (-f $file) {
         my $suffix = (fileparse($file, qr/\.[^.]*/))[2];
         #print "suffix = $suffix\n";
-        if (grep {".$_" eq $suffix} @{$types->{$opt{type}}}) {
+        unless (grep {".$_" eq $suffix} @{$ignore_prefixes->{$opt{type}}}) {
             $file =~ s{$cwd/}{}xms;
             push @files_to_grep, $file;
         }
@@ -114,6 +109,7 @@ my @commands = qw(
     -a
     xargs-tmp-file
     grep
+    -I
 );
 
 push(@commands, @ARGV);
