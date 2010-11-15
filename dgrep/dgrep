@@ -53,7 +53,7 @@ pod2usage(-exitstatus => 0, -verbose => 1) if $opt{help};
 #print STDERR (join("|",@ARGV),"\n");
 
 my $ignore_prefixes = {
-    ignore => [qw( js sql cpp svg tex )],
+    ignore => [qw( js sql cpp svg tex vb css )],
 };
 
 my %seen;
