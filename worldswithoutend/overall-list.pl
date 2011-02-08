@@ -30,6 +30,44 @@ my @other_lists = qw(
 );
 
 my $books = {};
+my $read  = {};
+
+# get the read books
+my $id = 336;
+
+my $url = 'http://www.worldswithoutend.com/profile.asp?id=' . $id;
+
+print "fetching $url\n";
+my $page = get($url);
+
+die "Couldn't get $url!" unless defined $page;
+
+# Create a parser object
+my $parser = XML::LibXML->new();
+$parser->recover(1);
+
+# Trap STDERR because the parser is quite verbose and annoying
+my $dom;
+{
+    local *STDERR;
+    open STDERR, '>', '/dev/null';
+    # parse the page
+    $dom = $parser->parse_html_string($page);
+}
+
+# Check that we got a dom object back
+die q{Parsing failed} unless defined $dom;
+
+# note parse_html_string throws away tbodys
+foreach my $title_node ( $dom->findnodes(q{(//div[@class='thelist'])[4]/table/tr/td/div[@class='awardslisting']/p[@class='title']}) ) {
+
+    my $author_node = $title_node->nextNonBlankSibling();
+
+    my $title  = $title_node->textContent;
+    my $author = $author_node->textContent;
+
+    $read->{$title}{author} = $author;
+}
 
 foreach my $list (@award_lists) {
     my $url = 'http://worldswithoutend.com/books_' . $list . '_index.asp?Page=1&PageLength=100';
@@ -121,5 +159,6 @@ foreach my $list (@other_lists) {
 
 foreach my $book (reverse sort { $books->{$a}{count} <=> $books->{$b}{count} } keys %$books) {
     next if $books->{$book}{count} < 4;
+    next if exists $read->{$book}{author};
     print "$books->{$book}{count}: $book - $books->{$book}{author}\n";
 }
