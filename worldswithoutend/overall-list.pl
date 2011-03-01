@@ -32,6 +32,8 @@ my @other_lists = qw(
 my $books = {};
 my $read  = {};
 
+my $cut_off = 5;
+
 # get the read books
 my $id = 336;
 
@@ -68,6 +70,8 @@ foreach my $title_node ( $dom->findnodes(q{(//div[@class='thelist'])[4]/table/tr
 
     $read->{$title}{author} = $author;
 }
+#print Dumper($read) . "\n";
+#exit;
 
 foreach my $list (@award_lists) {
     my $url = 'http://worldswithoutend.com/books_' . $list . '_index.asp?Page=1&PageLength=100';
@@ -155,10 +159,16 @@ foreach my $list (@other_lists) {
         $books->{$title}{author} = $author;
     }
 }
-#print Dumper($books) . "\n";
+my $sortx = sub {
+    $books->{$a}{count} <=> $books->{$b}{count}
+};
 
-foreach my $book (reverse sort { $books->{$a}{count} <=> $books->{$b}{count} } keys %$books) {
-    next if $books->{$book}{count} < 4;
+my $sort = sub {
+    (split/\s+/, $books->{$a}{author})[-1] cmp (split/\s+/, $books->{$b}{author})[-1];
+};
+
+foreach my $book (sort $sort keys %$books) {
+    next if $books->{$book}{count} < $cut_off;
     next if exists $read->{$book}{author};
-    print "$books->{$book}{count}: $book - $books->{$book}{author}\n";
+    print "$books->{$book}{author} - $book ($books->{$book}{count})\n";
 }
