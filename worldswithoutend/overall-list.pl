@@ -61,7 +61,7 @@ my $dom;
 die q{Parsing failed} unless defined $dom;
 
 # note parse_html_string throws away tbodys
-foreach my $title_node ( $dom->findnodes(q{(//div[@class='thelist'])[4]/table/tr/td/div[@class='awardslisting']/p[@class='title']}) ) {
+foreach my $title_node ( $dom->findnodes(q{(//div[@id='accordion'])/div[4]/table/tr/td/div[@class='awardslisting']/p[@class='title']}) ) {
 
     my $author_node = $title_node->nextNonBlankSibling();
 
@@ -71,7 +71,6 @@ foreach my $title_node ( $dom->findnodes(q{(//div[@class='thelist'])[4]/table/tr
     $read->{$title}{author} = $author;
 }
 #print Dumper($read) . "\n";
-#exit;
 
 foreach my $list (@award_lists) {
     my $url = 'http://worldswithoutend.com/books_' . $list . '_index.asp?Page=1&PageLength=100';
