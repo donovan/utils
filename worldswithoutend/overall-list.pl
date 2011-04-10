@@ -27,6 +27,7 @@ my @other_lists = qw(
     isfdb_balanced
     locus_bestsf
     pringle_sf
+    sf_mistressworks
 );
 
 my $books = {};
