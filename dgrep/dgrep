@@ -1,14 +1,14 @@
 #!/usr/bin/perl
 ##############################################################################
 #
-# Script:   TODO_SCRIPT_NAME
+# Script:   dgrep
 #
 # Author:   Donovan Jones <donovan@catalyst.net.nz>
 #
 # Description:
 #
-# TODO_DESCRIPTION
-#
+# grep preprocessor with better pruning options than grep provides
+# accepts all grep arguments
 
 use strict;
 use warnings;
@@ -19,87 +19,66 @@ use File::Find;
 use File::Basename;
 use File::Slurp;
 use Cwd;
+use File::HomeDir;
 
-# prune paths via config file and via command line (-p --prune)
-# add config file support
-# add support for other forms of file id besides extension
+my $home_dir = File::HomeDir->my_home;
 
-# type map, add support for building this structure from ini file
-# [types]
-# mason=html,mhtml,comp
-# perl=html,mhtml,comp,pm,t,pl
-# bash=sh
-# sql
-# js
+my $config_file = "$home_dir/.dgrep-ignore";
 
-#populate this from ini file
-my @prune_paths = qw(
-    .git
-);
+my $ignore = {};
+
+foreach my $line (read_file($config_file)) {
+    chomp($line);
+    my ($type,$arg) = split/:/, $line;
+    push @{$ignore->{$type}}, $arg;
+}
 
 my $cwd = cwd();
 
-#print "cwd = $cwd\n";
-#print STDERR (join("|",@ARGV),"\n");
-
 my(%opt);
 
-if(!GetOptions(\%opt, 'help|?', 'prune|p:s', 'type|t:s')) {
-    #pod2usage(-exitval => 1,  -verbose => 0);
+if(!GetOptions(\%opt, 'help|?', 'verbose|v')) {
+    pod2usage(-exitval => 1,  -verbose => 0);
 }
 
 pod2usage(-exitstatus => 0, -verbose => 1) if $opt{help};
-
-#print STDERR (join("|",@ARGV),"\n");
-
-my $ignore_prefixes = {
-    ignore => [qw( js sql cpp svg tex vb css )],
-};
-
-my %seen;
-foreach my $t (keys %$ignore_prefixes) {
-    foreach my $item (@{$ignore_prefixes->{$t}}) {
-        push @{$ignore_prefixes->{all}}, $item unless $seen{$item};
-        $seen{$item}++;
-    }
-}
-
-if ( $opt{prune} ) {
-    push @prune_paths, split/,/, $opt{prune};
-}
-
-$opt{type} //= 'ignore';
 
 my @files_to_grep;
 
 find(\&process_file, $cwd);
 
 sub process_file {
+
     my $file = $File::Find::name;
-    return if grep {$file =~ m{ / $_ / }xms} @prune_paths;
+
+    if ( grep {$file =~ m{ / $_ \z }xms} @{$ignore->{file}} ) {
+        print "file match, ignoring file $file\n" if $opt{verbose};
+        return;
+    }
+    if ( grep {$file =~ m{ / $_ / }xms} @{$ignore->{dir}} ) {
+        print "dir match, ignoring file $file\n" if $opt{verbose};
+        return;
+    }
+
     if (-f $file) {
         my $suffix = (fileparse($file, qr/\.[^.]*/))[2];
-        #print "suffix = $suffix\n";
-        unless (grep {".$_" eq $suffix} @{$ignore_prefixes->{$opt{type}}}) {
+        if ( grep {".$_" eq $suffix} @{$ignore->{suffix}} ) {
+            print "suffix match, ignoring file $file\n" if $opt{verbose};
+        }
+        else {
             $file =~ s{$cwd/}{}xms;
             push @files_to_grep, $file;
         }
-        #print "$file\n";
     }
     elsif (-d $file) {
         #print "$file is a dir\n";
     }
+
 }
 
-
-
-# do xargs stuff here
-#print "type files = \n";
 my $files;
 foreach my $file (sort @files_to_grep) {
     $files .= "$file\n";
-    #print "$file\0";
-    #print "$file\n";
 }
 
 write_file('xargs-tmp-file', $files);
@@ -124,19 +103,25 @@ __END__
 
 =head1 NAME
 
-TODO_SCRIPT_NAME - TODO_SHORT_DESCRIPTION
+dgrep - grep preprocessor
 
 =head1 SYNOPSIS
 
-  TODO_SCRIPT_NAME [options] <files>
+  dgrep [options] <files>
 
   Options:
 
    --help     detailed help message
+   --verbose  makes dgrep tell you about files its skipping
 
 =head1 DESCRIPTION
 
-TODO_DESCRIPTION
+Dgrep is a grep preprocessor, it looks in a config file to get a list of files
+that it should prune before invoking grep. The config file can include paths,
+files or file suffixes. It aims to keep the output as close to grep as
+possible. Dgrep assumes the grep arguments -r *, ie it operates on the cwd and
+is recursive by default. If you want it to be non recursive then grep on its
+own is probably a better bet.
 
 =head1 OPTIONS
 
