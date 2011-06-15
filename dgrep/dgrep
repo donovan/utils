@@ -7,8 +7,12 @@
 #
 # Description:
 #
-# grep preprocessor with better pruning options than grep provides
-# accepts all grep arguments
+# grep preprocessor with better pruning options than grep.
+# Accepts all grep arguments
+#
+# TODO
+# Add ---norecurse (-R) switch for making non recursive
+# Add --dir (-d) for passing basedir, currently uses pwd
 
 use strict;
 use warnings;
@@ -47,23 +51,25 @@ my @files_to_grep;
 
 find(\&process_file, $cwd);
 
+my %ignore;
+
 sub process_file {
 
     my $file = $File::Find::name;
 
     if ( grep {$file =~ m{ / $_ \z }xms} @{$ignore->{file}} ) {
-        print "file match, ignoring file $file\n" if $opt{verbose};
+        $ignore{"file match:   ignoring file => $file"}++ if $opt{verbose};
         return;
     }
-    if ( grep {$file =~ m{ / $_ / }xms} @{$ignore->{dir}} ) {
-        print "dir match, ignoring file $file\n" if $opt{verbose};
+    if ( my ($dir) = grep {$file =~ m{ $_ }xms} @{$ignore->{dir}} ) {
+        $ignore{"dir match:    ignoring dir  => $dir"}++ if $opt{verbose};
         return;
     }
 
     if (-f $file) {
         my $suffix = (fileparse($file, qr/\.[^.]*/))[2];
         if ( grep {".$_" eq $suffix} @{$ignore->{suffix}} ) {
-            print "suffix match, ignoring file $file\n" if $opt{verbose};
+            $ignore{"suffix match: ignoring file => $file"}++ if $opt{verbose};
         }
         else {
             $file =~ s{$cwd/}{}xms;
@@ -71,10 +77,18 @@ sub process_file {
         }
     }
     elsif (-d $file) {
-        #print "$file is a dir\n";
     }
 
 }
+
+if ($opt{verbose}) {
+    print "Ignoring the following files and directories:\n\n";
+    foreach my $ignore_message (sort keys %ignore) {
+        print $ignore_message . "\n";
+    }
+    print "\n---------------------------------------------\n";
+}
+
 
 my $files;
 foreach my $file (sort @files_to_grep) {
@@ -103,25 +117,62 @@ __END__
 
 =head1 NAME
 
-dgrep - grep preprocessor
+dgrep - grep preprocessor with better pruning
 
 =head1 SYNOPSIS
 
-  dgrep [options] <files>
+  dgrep [options] [--] [grep options] string
 
   Options:
 
    --help     detailed help message
-   --verbose  makes dgrep tell you about files its skipping
+   --verbose  displays the list for files and directories that will be ignored
+   --         any options after this are passed to grep
 
 =head1 DESCRIPTION
 
-Dgrep is a grep preprocessor, it looks in a config file to get a list of files
-that it should prune before invoking grep. The config file can include paths,
-files or file suffixes. It aims to keep the output as close to grep as
-possible. Dgrep assumes the grep arguments -r *, ie it operates on the cwd and
-is recursive by default. If you want it to be non recursive then grep on its
-own is probably a better bet.
+Dgrep is a grep preprocessor designed to prune files and directories before
+grepping. It is designed to filter the list of files grep will search and then
+call grep exactly as normal. It should output exactly what grep would output
+minus any output that would have resulted from any pruned files.
+
+Dgrep only operates in recursive grep mode and does not require a path.
+
+Examples:
+
+$ grep -r foo *
+$ dgrep foo
+
+$ grep -rl rotate *
+$ dgrep rotate -- -l
+
+Config:
+
+dgrep uses a config file called ~/.dgrep-ignore to get the list of files to
+ignore, here is an example :
+
+--------------------------
+# this is a comment in .dgrep-ignore
+# the following line makes grep ignore the specific jquery file
+file:js/jquery-ui-1.7.2.custom.min.js
+# the following line makes grep ignore everything under the .git dir
+dir:.git/
+# the following line makes grep ignore all fies with a .sql suffix
+suffix:sql
+--------------------------
+
+Alternatives:
+
+You may want to take a look at the tool ack: http://betterthangrep.com/
+
+"ack is a tool like grep, designed for programmers with large trees of
+heterogeneous source code. "
+
+The reason I prefer dgrep is I like and am familiar with grep and wish to
+simply give it better pruning abilities and then get out the way. With ack you
+need to learn a new syntax and there is no ganrentee you will find it on
+$random_box
+
 
 =head1 OPTIONS
 
