@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+
+# convert one line to many lines
+
+use strict;
+use warnings;
+
+use File::Slurp;
+use Data::UUID;
+
+my $ug = new Data::UUID;
+my $temp_filename = '/tmp/' . $ug->create_str();
+
+my $data = `xclip -o`;
+$data =~ s/\s+/\n/g;
+
+write_file( $temp_filename, $data ) ;
+
+system('xclip', '-i', $temp_filename);
+
+unlink $temp_filename;
+
+print "$data\n";
