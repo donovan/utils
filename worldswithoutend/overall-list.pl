@@ -28,6 +28,7 @@ my @other_lists = qw(
     locus_bestsf
     pringle_sf
     sf_mistressworks
+    guardian_sff
 );
 
 my $books = {};
