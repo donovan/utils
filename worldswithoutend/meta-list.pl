@@ -27,10 +27,19 @@ foreach my $book ( @$book_ids ) {
     $books->{$book->{book_id}}{read}   = $book->{read};
 }
 
-foreach my $book_id (reverse sort {$books->{$a}{score} <=> $books->{$b}{score}} keys %$books) {
+my $author_sort = sub {
+    (split/\s+/, $books->{$a}{author})[-1] cmp (split/\s+/, $books->{$b}{author})[-1]
+};
+
+my $score_sort = sub {
+    $books->{$a}{score} <=> $books->{$b}{score}
+};
+
+foreach my $book_id (sort $author_sort keys %$books) {
     next if $books->{$book_id}{score} < 30;
     if ($show_read) {
         next if $books->{$book_id}{read};
     }
     print "$books->{$book_id}{name} ($book_id) - $books->{$book_id}{author} => $books->{$book_id}{score}\n";
 }
+
